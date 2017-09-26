@@ -1,4 +1,12 @@
+/*移动端城市选择控件 */
 window.LArea = (function() {
+    var touch = 'ontouchstart' in window;
+    var isStart=false;
+
+    document.addEventListener('mouseup', function () {
+      isStart = false;
+    });
+
     var MobileArea = function() {
         this.gearArea;
         this.data;
@@ -51,10 +59,8 @@ window.LArea = (function() {
                 _self.gearArea = document.createElement("div");
                 _self.gearArea.className = "gearArea";
                 _self.gearArea.innerHTML = '<div class="area_ctrl slideInUp">' +
-                    '<div class="area_btn_box">' +
-                    '<div class="area_btn larea_cancel">取消</div>' +
-                    '<div class="area_btn larea_finish">确定</div>' +
-                    '</div>' +
+                    '<div class="area-title">请选择区域</div>' +
+                    '<div class="line-sm m-b-1"></div>' +
                     '<div class="area_roll_mask">' +
                     '<div class="area_roll">' +
                     '<div>' +
@@ -74,29 +80,40 @@ window.LArea = (function() {
                     '</div>' +
                     '</div>' +
                     '</div>' +
-                    '</div>';
+                    '<div class="line-sm m-t-1"></div>' +
+                    '<div class="area_btn_box">' +
+                    '<div class="area_btn larea_cancel">取消</div>' +
+                    '<div class="area_btn larea_finish">确定</div>' +
+                    '</div>' +
+                    '</div>' ;
                 document.body.appendChild(_self.gearArea);
                 areaCtrlInit();
-                var larea_cancel = _self.gearArea.querySelector(".larea_cancel");
-                larea_cancel.addEventListener('touchstart', function(e) {
+
+
+              var touchstart = touch ? 'touchstart' : 'mousedown',
+                touchmove = touch ? 'touchmove' : 'mousemove',
+                touchend = touch ? 'touchend' : 'mouseup';
+
+              var larea_cancel = _self.gearArea.querySelector(".larea_cancel");
+                larea_cancel.addEventListener(touchstart, function(e) {
                     _self.close(e);
                 });
                 var larea_finish = _self.gearArea.querySelector(".larea_finish");
-                larea_finish.addEventListener('touchstart', function(e) {
+                larea_finish.addEventListener(touchstart, function(e) {
                     _self.finish(e);
                 });
                 var area_province = _self.gearArea.querySelector(".area_province");
                 var area_city = _self.gearArea.querySelector(".area_city");
                 var area_county = _self.gearArea.querySelector(".area_county");
-                area_province.addEventListener('touchstart', gearTouchStart);
-                area_city.addEventListener('touchstart', gearTouchStart);
-                area_county.addEventListener('touchstart', gearTouchStart);
-                area_province.addEventListener('touchmove', gearTouchMove);
-                area_city.addEventListener('touchmove', gearTouchMove);
-                area_county.addEventListener('touchmove', gearTouchMove);
-                area_province.addEventListener('touchend', gearTouchEnd);
-                area_city.addEventListener('touchend', gearTouchEnd);
-                area_county.addEventListener('touchend', gearTouchEnd);
+                area_province.addEventListener(touchstart, gearTouchStart);
+                area_city.addEventListener(touchstart, gearTouchStart);
+                area_county.addEventListener(touchstart, gearTouchStart);
+                area_province.addEventListener(touchmove, gearTouchMove);
+                area_city.addEventListener(touchmove, gearTouchMove);
+                area_county.addEventListener(touchmove, gearTouchMove);
+                area_province.addEventListener(touchend, gearTouchEnd);
+                area_city.addEventListener(touchend, gearTouchEnd);
+                area_county.addEventListener(touchend, gearTouchEnd);
             }
             //初始化插件默认值
             function areaCtrlInit() {
@@ -115,6 +132,7 @@ window.LArea = (function() {
             }
             //触摸开始
             function gearTouchStart(e) {
+              isStart = true;
                 e.preventDefault();
                 var target = e.target;
                 while (true) {
@@ -125,7 +143,7 @@ window.LArea = (function() {
                     }
                 }
                 clearInterval(target["int_" + target.id]);
-                target["old_" + target.id] = e.targetTouches[0].screenY;
+                target["old_" + target.id] = (touch ? e.targetTouches[0].screenY : e.screenY);
                 target["o_t_" + target.id] = (new Date()).getTime();
                 var top = target.getAttribute('top');
                 if (top) {
@@ -137,6 +155,9 @@ window.LArea = (function() {
             }
             //手指移动
             function gearTouchMove(e) {
+              if(!isStart) {
+                return null;
+              }
                 e.preventDefault();
                 var target = e.target;
                 while (true) {
@@ -146,18 +167,19 @@ window.LArea = (function() {
                         break
                     }
                 }
-                target["new_" + target.id] = e.targetTouches[0].screenY;
+                target["new_" + target.id] = (touch ? e.targetTouches[0].screenY : e.screenY);
                 target["n_t_" + target.id] = (new Date()).getTime();
                 var f = (target["new_" + target.id] - target["old_" + target.id]) * 30 / window.innerHeight;
                 target["pos_" + target.id] = target["o_d_" + target.id] + f;
                 target.style["-webkit-transform"] = 'translate3d(0,' + target["pos_" + target.id] + 'em,0)';
                 target.setAttribute('top', target["pos_" + target.id] + 'em');
-                if(e.targetTouches[0].screenY<1){
+                if((touch ? e.targetTouches[0].screenY : e.screenY)<1){
                     gearTouchEnd(e);
                 };
             }
             //离开屏幕
             function gearTouchEnd(e) {
+              isStart = false;
                 e.preventDefault();
                 var target = e.target;
                 while (true) {
@@ -248,7 +270,7 @@ window.LArea = (function() {
                              break;
                      }
                 }
-                
+
             }
             _self.getData(function() {
                 _self.trigger.addEventListener('click', popupArea);
@@ -265,8 +287,13 @@ window.LArea = (function() {
             if (gearVal > maxVal) {
                 gearVal = maxVal;
             }
+
             gearChild[_self.index].setAttribute('data-len', l);
             if (l > 0) {
+              console.info('gearVal: ', gearVal, gearVal !== gearVal);
+                if(gearVal !== gearVal) {
+                  return;
+                }
                 var id = item[gearVal][this.keys['id']];
                 var childData;
                 switch (_self.type) {
@@ -274,7 +301,7 @@ window.LArea = (function() {
                     childData = item[gearVal].child
                         break;
                     case 2:
-                     var nextData= _self.data[_self.index+1] 
+                     var nextData= _self.data[_self.index+1]
                      for (var i in nextData) {
                          if(i==id){
                             childData = nextData[i];
@@ -334,6 +361,7 @@ window.LArea = (function() {
             var evt = new CustomEvent('input');
             _self.trigger.dispatchEvent(evt);
             document.body.removeChild(_self.gearArea);
+            _self.gearArea=null;
         }
     }
     return MobileArea;
